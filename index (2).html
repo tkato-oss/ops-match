@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>オプスマッチ - あらゆるデータを突合し差異をレポートで出力</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans JP','Helvetica Neue',sans-serif;color:#1e293b;background:#fff;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #f1f5f9;padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{display:flex;align-items:center;gap:8px}
+.nav-icon{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800}
+.nav-logo span{font-size:14px;font-weight:700;letter-spacing:-.3px}
+.nav-links{display:flex;gap:24px;font-size:13px;color:#64748b}
+.nav-links a:hover{color:#2563eb}
+.hero{min-height:88vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 24px 60px;position:relative;overflow:hidden;background:linear-gradient(180deg,#f8faff 0%,#fff 100%)}
+.hero-bg1{position:absolute;top:-200px;right:-200px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.04) 0%,transparent 70%)}
+.hero-bg2{position:absolute;bottom:-100px;left:-100px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.03) 0%,transparent 70%)}
+.hero-c{text-align:center;max-width:760px;position:relative;opacity:0;transform:translateY(24px);animation:fadeUp .8s .2s cubic-bezier(.16,1,.3,1) forwards}
+.badge{display:inline-flex;align-items:center;gap:8px;border-radius:100px;padding:6px 16px;margin-bottom:24px;font-size:12px;font-weight:600;letter-spacing:.5px}
+.badge-blue{background:#eff6ff;border:1px solid #dbeafe;color:#2563eb}
+.badge-green{background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a}
+.hero h1{font-size:clamp(28px,4.5vw,48px);font-weight:800;line-height:1.3;margin-bottom:20px;letter-spacing:-1px;color:#0f172a}
+.hero h1 em{font-style:normal;color:#2563eb}
+.hero-c>p{color:#64748b;font-size:clamp(14px,1.8vw,17px);line-height:1.9;margin-bottom:36px;max-width:560px;margin-left:auto;margin-right:auto}
+.s{padding:72px 24px}.s-bg{background:#f8fafc}.s-dark{background:linear-gradient(135deg,#1e3a5f 0%,#1e40af 100%);color:#fff}
+.si{max-width:760px;margin:0 auto}
+.st{font-size:12px;color:#2563eb;letter-spacing:2px;font-weight:700;margin-bottom:8px;text-align:center}
+.s-dark .st{color:#93c5fd}
+.sh{font-size:clamp(22px,3vw,28px);font-weight:700;margin-bottom:12px;color:#0f172a;text-align:center}
+.s-dark .sh{color:#fff}
+.sd{color:#64748b;font-size:14px;text-align:center;margin-bottom:36px}
+.s-dark .sd{color:rgba(255,255,255,.6)}
+.mode-sw{display:flex;justify-content:center;margin-bottom:36px}
+.mode-track{display:flex;background:#f1f5f9;border-radius:12px;padding:4px;border:1px solid #e2e8f0}
+.mode-btn{padding:12px 24px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .3s;background:transparent;color:#64748b;position:relative}
+.mode-btn.active{background:#fff;color:#1e293b;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.mode-tag{position:absolute;top:-8px;right:-4px;font-size:8px;background:#2563eb;color:#fff;padding:2px 6px;border-radius:100px;font-weight:700}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.cc{background:#fff;border-radius:14px;padding:24px 20px;border:1px solid #e2e8f0;transition:all .2s}
+.cc:hover{border-color:#cbd5e1;box-shadow:0 4px 16px rgba(0,0,0,.04)}
+.cc-icon{font-size:24px;margin-bottom:10px}
+.cc h3{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px}
+.cc p{font-size:12px;color:#64748b;line-height:1.7}
+.mode-panel{display:none}.mode-panel.active{display:block;animation:fadeUp .4s ease}
+.flow{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:24px 0}
+.flow-box{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;text-align:center;min-width:80px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.flow-icon{font-size:20px;margin-bottom:2px}.flow-label{font-size:10px;font-weight:600;color:#1e293b}.flow-sub{font-size:9px;color:#94a3b8}
+.flow-arrow{color:#94a3b8;font-size:16px}
+.flow-engine{width:40px;height:40px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;box-shadow:0 4px 16px rgba(37,99,235,.3);animation:pulse 2s ease-in-out infinite}
+.flow-out{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe}.flow-out .flow-label{color:#2563eb}
+.flow-api{border-color:#bfdbfe;background:#eff6ff}.flow-api .flow-label{color:#2563eb}
+.flow-notify{border-color:#bbf7d0;background:#f0fdf4}.flow-notify .flow-label{color:#16a34a}
+.steps{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.step{flex:1 1 140px;max-width:180px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 14px;text-align:center;transition:all .5s cubic-bezier(.16,1,.3,1)}
+.step.active{background:#2563eb;border-color:#2563eb;transform:translateY(-3px);box-shadow:0 8px 24px rgba(37,99,235,.2)}
+.step-icon{font-size:22px;margin-bottom:6px}.step-num{font-size:9px;color:#94a3b8;font-weight:700;letter-spacing:2px;margin-bottom:3px}
+.step.active .step-num{color:rgba(255,255,255,.5)}
+.step h3{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:3px}.step.active h3{color:#fff}
+.step p{font-size:10px;color:#94a3b8;line-height:1.5}.step.active p{color:rgba(255,255,255,.7)}
+.int-logos{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin:24px 0}
+.int-logo{display:flex;flex-direction:column;align-items:center;gap:4px}
+.int-box{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid #e2e8f0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.int-logo span{font-size:10px;color:#64748b}
+.uc-tabs{display:flex;gap:6px;justify-content:center;margin-bottom:24px;flex-wrap:wrap}
+.uc-tab{padding:8px 16px;border-radius:100px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:11px;font-weight:600;cursor:pointer;transition:all .3s}
+.uc-tab.active{border-color:#2563eb;background:#2563eb;color:#fff}
+.uc-panel{display:none}.uc-panel.active{display:block}
+.uc-card{background:#fff;border-radius:16px;padding:24px 20px;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,.04)}
+.uc-tag{font-size:10px;color:#2563eb;font-weight:700;letter-spacing:2px;margin-bottom:4px}
+.uc-card h3{font-size:17px;font-weight:700;margin-bottom:6px;color:#0f172a}
+.uc-card>p{font-size:12px;color:#64748b;line-height:1.8;margin-bottom:18px}
+.uc-match{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.uc-file{background:#f8fafc;border-radius:10px;padding:12px 14px;text-align:center;min-width:90px;border:1px solid #e2e8f0}
+.uc-file-icon{font-size:18px;margin-bottom:2px}.uc-file h4{font-size:10px;font-weight:600;color:#0f172a}.uc-file span{font-size:9px;color:#94a3b8}
+.uc-vs{width:26px;height:26px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0}
+.uc-checks{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.uc-check{display:flex;align-items:center;gap:4px;padding:6px 8px;background:#f8fafc;border-radius:6px;border:1px solid #f1f5f9;font-size:10px;color:#334155}
+.uc-chk{width:14px;height:14px;border-radius:3px;background:#dcfce7;display:flex;align-items:center;justify-content:center;color:#16a34a;font-size:8px;font-weight:700;flex-shrink:0}
+.note{margin-top:24px;background:#fffbeb;border:1px solid #fef3c7;border-radius:10px;padding:12px 16px;display:flex;gap:8px;align-items:flex-start;font-size:11px}
+.note h4{font-weight:600;color:#92400e;margin-bottom:1px}.note p{color:#a16207;line-height:1.6}
+table.cmp{width:100%;border-collapse:collapse;font-size:11px}table.cmp thead tr{border-bottom:2px solid #e2e8f0}table.cmp th{padding:8px;color:#94a3b8;font-weight:600}table.cmp td{padding:8px;border-bottom:1px solid #f1f5f9}table.cmp tr:nth-child(even){background:#f8fafc}
+.rm{display:flex;gap:14px;padding:18px;border-radius:12px;margin-bottom:8px;border:1px solid}
+.rm.done{background:rgba(74,222,128,.06);border-color:rgba(74,222,128,.15)}.rm.next{background:rgba(37,99,235,.04);border-color:rgba(37,99,235,.12)}.rm.plan{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.06)}
+.rm-badge{min-width:48px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:1px}
+.rm.done .rm-badge{background:#4ade80;color:#1a1a2e}.rm.next .rm-badge{background:#2563eb;color:#fff}.rm.plan .rm-badge{background:rgba(255,255,255,.1);color:rgba(255,255,255,.4)}
+.rm-phase{font-size:11px;font-weight:700;margin-bottom:1px}.rm.done .rm-phase{color:#4ade80}.rm.next .rm-phase{color:#93c5fd}.rm.plan .rm-phase{color:rgba(255,255,255,.5)}
+.rm-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:2px}.rm-desc{font-size:11px;color:rgba(255,255,255,.5);line-height:1.5}
+.cta{text-align:center}.cta h2{font-size:22px;font-weight:700;margin-bottom:10px}.cta p{color:rgba(255,255,255,.6);font-size:13px;margin-bottom:24px}
+.cta-btn{display:inline-block;background:#fff;color:#1e40af;padding:12px 36px;border-radius:100px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.1);transition:all .2s}.cta-btn:hover{opacity:.85;transform:translateY(-1px)}
+footer{padding:24px;text-align:center;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8}
+.demo-box{background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.08)}
+.demo-bar{background:#f8fafc;padding:8px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:5px}
+.demo-dot{width:8px;height:8px;border-radius:50%}
+.demo-url{flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:9px;color:#94a3b8;margin-left:4px}
+.demo-body{padding:24px}
+.demo-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #f1f5f9}
+.demo-tab{padding:8px 16px;font-size:12px;font-weight:600;color:#94a3b8;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
+.demo-tab.active{color:#2563eb;border-bottom-color:#2563eb}
+.demo-pane{display:none}.demo-pane.active{display:block}
+.drop-zone{border:2px dashed #cbd5e1;border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;margin:8px 0}
+.drop-zone:hover,.drop-zone.drag{border-color:#2563eb;background:#eff6ff}
+.drop-zone.has-file{border-color:#16a34a;background:#f0fdf4;border-style:solid}
+.drop-zone-icon{font-size:28px;margin-bottom:6px}.drop-zone-text{font-size:12px;color:#64748b}
+.drop-zone-file{font-size:12px;color:#16a34a;font-weight:600}
+.drop-zone input{display:none}
+.run-btn{display:block;width:100%;padding:12px;border-radius:10px;border:none;background:#2563eb;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:16px;transition:all .2s}
+.run-btn:hover{background:#1d4ed8}.run-btn:disabled{background:#cbd5e1;cursor:not-allowed}
+.rh{display:flex;gap:16px;padding:12px 0;border-bottom:1px solid #e2e8f0;margin-bottom:12px}
+.rs{text-align:center;min-width:60px}.rs .n{font-size:20px;font-weight:700}.rs .l{font-size:9px;color:#94a3b8}
+.rr{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:7px;margin-bottom:3px;font-size:11px}
+.rr.match{background:#f0fdf4}.rr.diff{background:#fef2f2}.rr.unmatched{background:#fffbeb}
+.ri{color:#94a3b8;width:20px;text-align:center;flex-shrink:0}.rn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ra{color:#64748b;min-width:80px;text-align:right;font-variant-numeric:tabular-nums}
+.rb{font-weight:600;padding:2px 8px;border-radius:100px;font-size:9px;white-space:nowrap}
+.rb.match{color:#16a34a;background:#dcfce7}.rb.diff{color:#dc2626;background:#fef2f2}.rb.unmatched{color:#d97706;background:#fef9c3}
+.pn{display:flex;align-items:center;gap:6px;margin-top:12px;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:10px;color:#16a34a}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{box-shadow:0 4px 16px rgba(37,99,235,.3)}50%{box-shadow:0 4px 24px rgba(37,99,235,.5)}}
+@media(max-width:600px){.nav-links{display:none}.flow{flex-direction:column;gap:4px}.uc-checks{grid-template-columns:1fr}.uc-match{flex-direction:column;gap:4px}.mode-btn{padding:10px 14px;font-size:11px}}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-logo"><div class="nav-icon">O</div><span>オプスマッチ</span></div><div class="nav-links"><a href="#problem">課題</a><a href="#solution">仕組み</a><a href="#usecases">活用シーン</a><a href="#demo">デモ</a><a href="#compare">比較</a></div></nav>
+
+<section class="hero"><div class="hero-bg1"></div><div class="hero-bg2"></div><div class="hero-c">
+<div class="badge badge-blue"><div style="width:6px;height:6px;border-radius:50%;background:#2563eb"></div>POWERED BY NEWCREWS</div>
+<h1>あらゆるデータを突合し<br/><em>差異をレポートで出力</em></h1>
+<p>ファイルを投げるだけでも、会計ソフトと繋げても。<br/>御社の環境に合わせて突合を自動化します。</p>
+<div class="mode-sw"><div class="mode-track"><button class="mode-btn active" onclick="switchMode(0)">📤 ファイルアップロード型</button><button class="mode-btn" onclick="switchMode(1)">💻 会計ソフト連携型<span class="mode-tag">NEW</span></button></div></div>
+<div class="mode-panel active" id="mp0"><div class="flow"><div class="flow-box"><div class="flow-icon">📄</div><div class="flow-label">データ A</div><div class="flow-sub">Excel / CSV / PDF</div></div><div class="flow-arrow">+</div><div class="flow-box"><div class="flow-icon">📄</div><div class="flow-label">データ B</div><div class="flow-sub">Excel / CSV / PDF</div></div><div class="flow-arrow">→</div><div class="flow-engine">⇄</div><div class="flow-arrow">→</div><div class="flow-box flow-out"><div class="flow-icon">📊</div><div class="flow-label">差異レポート</div></div></div><div class="badge badge-green">専用URLにファイルを投げるだけ。あらゆる突合に対応</div></div>
+<div class="mode-panel" id="mp1"><div class="flow"><div class="flow-box flow-api"><div class="flow-icon">💻</div><div class="flow-label">freee / MF / 弥生</div><div class="flow-sub">入出金明細を自動取得</div></div><div class="flow-arrow">→</div><div class="flow-engine">⇄</div><div class="flow-arrow">→</div><div class="flow-box flow-out"><div class="flow-icon">📊</div><div class="flow-label">突合・記載</div><div class="flow-sub">差異検出+仕訳連携</div></div><div class="flow-arrow">→</div><div class="flow-box flow-notify"><div class="flow-icon">💬</div><div class="flow-label">結果通知</div><div class="flow-sub">Slack / CW</div></div></div><div class="badge badge-green">会計ソフトと繋ぐだけ。取得→突合→記載まで全自動</div></div>
+</div></section>
+
+<section class="s s-bg" id="problem"><div class="si"><div class="st">PROBLEM</div><h2 class="sh">こんな突合作業に時間をかけていませんか？</h2><p class="sd">手作業による突合は、時間がかかるだけでなくミスの温床です</p><div class="cg"><div class="cc"><div class="cc-icon">⏱</div><h3>膨大な時間</h3><p>Excelで1行ずつ照合。月末に経理担当者が丸1日かけている企業も</p></div><div class="cc"><div class="cc-icon">😰</div><h3>見落としリスク</h3><p>未入金の見落とし、二重払い。手作業では完全なチェックが困難</p></div><div class="cc"><div class="cc-icon">🔀</div><h3>データが合わない</h3><p>振込手数料・源泉徴収・まとめ払い・名義違い。単純な金額マッチでは突合不可</p></div></div></div></section>
+
+<section class="s" id="solution"><div class="si"><div class="st">HOW IT WORKS</div>
+<div class="mode-sw"><div class="mode-track"><button class="mode-btn active" onclick="switchMode(0)">📤 ファイルアップロード型</button><button class="mode-btn" onclick="switchMode(1)">💻 会計ソフト連携型<span class="mode-tag">NEW</span></button></div></div>
+<div class="mode-panel active" id="sp0"><h2 class="sh">URLにファイルを投げるだけ</h2><p class="sd">専用のURLを開いて、ExcelやCSVを投げるだけ。あらゆるデータの突合に対応します</p><div class="steps" id="steps0"><div class="step"><div class="step-icon">🌐</div><div class="step-num">STEP 01</div><h3>URLを開く</h3><p>専用URLにアクセスしてログイン</p></div><div class="step"><div class="step-icon">📤</div><div class="step-num">STEP 02</div><h3>ファイルを投げる</h3><p>Excel・CSV・PDFをドラッグ＆ドロップ</p></div><div class="step"><div class="step-icon">📊</div><div class="step-num">STEP 03</div><h3>レポート確認</h3><p>差異のある項目だけハイライト表示</p></div></div>
+<div style="margin-top:36px"><div style="text-align:center;font-size:12px;font-weight:600;color:#94a3b8;letter-spacing:1px;margin-bottom:16px">対応する突合の例</div><div class="cg"><div class="cc"><div class="cc-icon">🏦</div><h3>入出金 × 請求書</h3><p>銀行明細と請求書の照合。未入金・二重払いを検出</p></div><div class="cc"><div class="cc-icon">📅</div><h3>シフト × 勤怠</h3><p>シフト予定と打刻実績のズレを自動検出</p></div><div class="cc"><div class="cc-icon">📋</div><h3>請求書 × 振込画面</h3><p>請求金額と実際の振込額の差異を確認</p></div><div class="cc"><div class="cc-icon">📦</div><h3>発注書 × 納品書</h3><p>発注内容と納品実績の突合</p></div><div class="cc"><div class="cc-icon">💰</div><h3>売上台帳 × 入金</h3><p>売上管理台帳と実際の入金を照合</p></div><div class="cc"><div class="cc-icon">🔗</div><h3>その他あらゆる突合</h3><p>2つ以上のデータがあれば突合可能。ご相談ください</p></div></div></div>
+<div class="note"><span style="font-size:14px;flex-shrink:0">💡</span><div><h4>会計ソフト未導入でもOK</h4><p>インターネットバンキングからCSVをダウンロードし、このツールに投げるだけ。特別なソフトのインストールは不要です。</p></div></div></div>
+<div class="mode-panel" id="sp1"><h2 class="sh">会計ソフトと繋ぐだけで全自動</h2><p class="sd">freee・マネーフォワード・弥生から入出金明細を自動取得。<br/>突合から仕訳の記載まで、人の手を介さずに完了します</p>
+<div class="int-logos"><div class="int-logo"><div class="int-box" style="color:#2563eb;font-size:14px">freee</div><span>freee会計</span></div><div class="int-logo"><div class="int-box" style="color:#3b82f6;font-size:12px">MF</div><span>マネーフォワード</span></div><div class="int-logo"><div class="int-box" style="color:#059669;font-size:12px">弥生</div><span>弥生会計</span></div></div>
+<div class="steps" id="steps1"><div class="step"><div class="step-icon">🔗</div><div class="step-num">STEP 01</div><h3>会計ソフトと連携</h3><p>初回のみ。お使いの会計ソフトを接続</p></div><div class="step"><div class="step-icon">📥</div><div class="step-num">STEP 02</div><h3>明細を自動取得</h3><p>入出金明細と請求書を自動で取得</p></div><div class="step"><div class="step-icon">⚡</div><div class="step-num">STEP 03</div><h3>突合・記載</h3><p>差異検出と仕訳の記載を自動実行</p></div><div class="step"><div class="step-icon">💬</div><div class="step-num">STEP 04</div><h3>結果が届く</h3><p>差異があればSlack・CWに通知</p></div></div>
+<div style="margin-top:36px"><div style="text-align:center;font-size:12px;font-weight:600;color:#94a3b8;letter-spacing:1px;margin-bottom:16px">自動化される業務</div><div class="cg"><div class="cc"><div class="cc-icon">📥</div><h3>入出金明細の取得</h3><p>会計ソフト経由で銀行明細を自動取得。CSVダウンロード不要</p></div><div class="cc"><div class="cc-icon">⚡</div><h3>請求書との突合</h3><p>取得した明細と請求書を自動照合。手数料・源泉も自動補正</p></div><div class="cc"><div class="cc-icon">📝</div><h3>仕訳の記載</h3><p>突合結果を会計ソフトに自動反映。手入力ゼロ</p></div></div></div>
+<div class="note"><span style="font-size:14px;flex-shrink:0">💡</span><div><h4>段階的に導入できます</h4><p>まずはファイルアップロード型でスタートし、運用が安定したら会計ソフト連携に切り替えることも可能です。</p></div></div></div>
+</div></section>
+
+<section class="s s-bg" id="usecases"><div class="si"><div class="st">USE CASES</div><h2 class="sh">活用シーン</h2><p class="sd">入出金突合を中心に、さまざまな突合業務に対応</p>
+<div class="uc-tabs"><button class="uc-tab active" onclick="switchUC(0)">入出金 × 請求書</button><button class="uc-tab" onclick="switchUC(1)">シフト × 勤怠</button><button class="uc-tab" onclick="switchUC(2)">3方向突合</button></div>
+<div class="uc-panel active" id="uc0"><div class="uc-card"><div class="uc-tag">CASE 01 — 入出金突合</div><h3>銀行明細 × 請求書</h3><p>複数銀行の明細と売掛・買掛の請求書を一括突合。振込手数料・源泉徴収・まとめ払い・名義不一致にも対応。</p><div class="uc-match"><div class="uc-file"><div class="uc-file-icon">🏦</div><h4>銀行明細A</h4><span>三井住友</span></div><div class="uc-vs">+</div><div class="uc-file"><div class="uc-file-icon">🏦</div><h4>銀行明細B</h4><span>みずほ</span></div><div class="uc-vs">⇄</div><div class="uc-file"><div class="uc-file-icon">📄</div><h4>請求書</h4><span>PDF / Excel</span></div></div><div class="uc-checks"><div class="uc-check"><div class="uc-chk">✓</div>請求金額と振込額</div><div class="uc-check"><div class="uc-chk">✓</div>振込手数料の補正</div><div class="uc-check"><div class="uc-chk">✓</div>未入金の検出</div><div class="uc-check"><div class="uc-chk">✓</div>二重払いの検出</div><div class="uc-check"><div class="uc-chk">✓</div>名義の照合</div><div class="uc-check"><div class="uc-chk">✓</div>支払日のズレ</div></div></div></div>
+<div class="uc-panel" id="uc1"><div class="uc-card"><div class="uc-tag">CASE 02 — 勤怠突合</div><h3>シフト表 × 勤怠時間</h3><p>シフト管理表と勤怠打刻データを突合。予定と実績のズレを自動検出。</p><div class="uc-match"><div class="uc-file"><div class="uc-file-icon">📅</div><h4>シフト管理表</h4><span>Excel / CSV</span></div><div class="uc-vs">⇄</div><div class="uc-file"><div class="uc-file-icon">⏰</div><h4>勤怠データ</h4><span>Excel / CSV</span></div></div><div class="uc-checks"><div class="uc-check"><div class="uc-chk">✓</div>出勤時間の一致</div><div class="uc-check"><div class="uc-chk">✓</div>退勤時間の一致</div><div class="uc-check"><div class="uc-chk">✓</div>休憩時間の一致</div><div class="uc-check"><div class="uc-chk">✓</div>勤務日数の一致</div></div></div></div>
+<div class="uc-panel" id="uc2"><div class="uc-card"><div class="uc-tag">CASE 03 — 3方向突合</div><h3>稼働報告書 × 請求書 × 従業員台帳</h3><p>3つのデータソースをクロスチェック。勤務時間・単価・税額の整合性を一括検証。</p><div class="uc-match"><div class="uc-file"><div class="uc-file-icon">📊</div><h4>稼働報告書</h4><span>Excel</span></div><div class="uc-vs">⇄</div><div class="uc-file"><div class="uc-file-icon">📄</div><h4>請求書</h4><span>PDF</span></div><div class="uc-vs">⇄</div><div class="uc-file"><div class="uc-file-icon">📋</div><h4>従業員台帳</h4><span>Excel</span></div></div><div class="uc-checks"><div class="uc-check"><div class="uc-chk">✓</div>勤務時間の一致</div><div class="uc-check"><div class="uc-chk">✓</div>単価の照合</div><div class="uc-check"><div class="uc-chk">✓</div>金額の検算</div><div class="uc-check"><div class="uc-chk">✓</div>税額の検算</div></div></div></div>
+</div></section>
+
+<section class="s" id="demo"><div class="si">
+<div class="st">INTERACTIVE DEMO</div>
+<h2 class="sh">今すぐ突合を体験</h2>
+<p class="sd">サンプルデータで試すか、お手元のファイルをアップロードして実際に突合できます</p>
+<div class="demo-box"><div class="demo-bar"><div class="demo-dot" style="background:#f87171"></div><div class="demo-dot" style="background:#fbbf24"></div><div class="demo-dot" style="background:#4ade80"></div><div class="demo-url">ops-match.app — インタラクティブデモ</div></div>
+<div class="demo-body">
+<div class="demo-tabs"><div class="demo-tab active" onclick="switchDemo(0)">サンプルで体験</div><div class="demo-tab" onclick="switchDemo(1)">自分のファイルで試す</div></div>
+
+<div class="demo-pane active" id="dp0">
+<div style="font-size:13px;color:#64748b;margin-bottom:16px">売上管理台帳と銀行入出金明細のサンプルデータで突合を体験できます。</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px"><div style="font-size:11px;font-weight:600;color:#334155;margin-bottom:4px">📊 売上管理台帳</div><div style="font-size:10px;color:#94a3b8">8件の請求データ（合計 ¥7,315,000）</div></div>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px"><div style="font-size:11px;font-weight:600;color:#334155;margin-bottom:4px">🏦 銀行入出金明細</div><div style="font-size:10px;color:#94a3b8">7件の入金データ（合計 ¥6,762,360）</div></div>
+</div>
+<button class="run-btn" id="sampleBtn" onclick="runSample()">サンプルデータで突合を実行</button>
+<div id="sR"></div>
+</div>
+
+<div class="demo-pane" id="dp1">
+<div style="font-size:13px;color:#64748b;margin-bottom:16px">2つのExcel / CSVファイルをアップロードして突合します。<br/>1列目に取引先名、2列目に金額が入っていれば突合できます。</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div><div style="font-size:11px;font-weight:600;color:#334155;margin-bottom:4px">① データA（売上台帳・請求書等）</div>
+<div class="drop-zone" id="dz1" onclick="document.getElementById('f1').click()"><div class="drop-zone-icon">📄</div><div class="drop-zone-text">Excel / CSV をドロップ</div><input type="file" id="f1" accept=".xlsx,.xls,.csv" onchange="handleFile(1,this)"></div></div>
+<div><div style="font-size:11px;font-weight:600;color:#334155;margin-bottom:4px">② データB（銀行明細・入金記録等）</div>
+<div class="drop-zone" id="dz2" onclick="document.getElementById('f2').click()"><div class="drop-zone-icon">🏦</div><div class="drop-zone-text">Excel / CSV をドロップ</div><input type="file" id="f2" accept=".xlsx,.xls,.csv" onchange="handleFile(2,this)"></div></div>
+</div>
+<button class="run-btn" id="uBtn" onclick="runUpload()" disabled>突合を実行</button>
+<div id="uR"></div>
+</div>
+
+<div class="pn">🔒 アップロードされたファイルはブラウザ内でのみ処理されます。サーバーへの送信は一切行いません。</div>
+</div></div>
+</div></section>
+
+<section class="s s-bg" id="compare"><div class="si"><div class="st">COMPARISON</div><h2 class="sh">従来 vs オプスマッチ</h2>
+<table class="cmp"><thead><tr><th style="text-align:left">項目</th><th style="text-align:center">従来の手作業</th><th style="text-align:center;color:#2563eb">ファイルアップロード型</th><th style="text-align:center;color:#2563eb">会計ソフト連携型</th></tr></thead><tbody>
+<tr><td style="font-weight:600">突合時間</td><td style="text-align:center;color:#dc2626">6〜10h/月</td><td style="text-align:center;color:#16a34a;font-weight:600">数分</td><td style="text-align:center;color:#16a34a;font-weight:600">0分（全自動）</td></tr>
+<tr><td style="font-weight:600">データ取得</td><td style="text-align:center">手動コピペ</td><td style="text-align:center">CSVダウンロード</td><td style="text-align:center;font-weight:600">自動取得</td></tr>
+<tr><td style="font-weight:600">対応範囲</td><td style="text-align:center">個別対応</td><td style="text-align:center;font-weight:600">あらゆる突合</td><td style="text-align:center;font-weight:600">入出金に特化</td></tr>
+<tr><td style="font-weight:600">見落とし</td><td style="text-align:center;color:#dc2626">ヒューマンエラー</td><td style="text-align:center;color:#16a34a;font-weight:600">全件自動</td><td style="text-align:center;color:#16a34a;font-weight:600">全件自動</td></tr>
+<tr><td style="font-weight:600">仕訳記載</td><td style="text-align:center">手入力</td><td style="text-align:center">手入力</td><td style="text-align:center;font-weight:600;color:#16a34a">自動記載</td></tr>
+<tr><td style="font-weight:600">定期実行</td><td style="text-align:center">毎月手動</td><td style="text-align:center">毎月手動</td><td style="text-align:center;font-weight:600">毎日自動</td></tr>
+<tr><td style="font-weight:600">導入ハードル</td><td style="text-align:center">—</td><td style="text-align:center;color:#16a34a;font-weight:600">URLを開くだけ</td><td style="text-align:center">初回接続のみ</td></tr>
+</tbody></table></div></section>
+
+<section class="s s-dark"><div class="si"><div class="st">ROADMAP</div><h2 class="sh" style="color:#fff">段階的に自動化を進めます</h2><p class="sd">ファイルアップロード型でスタートし、段階的に自動化を拡大</p>
+<div class="rm done"><div class="rm-badge">✅ 完了</div><div><div class="rm-phase">Phase 1</div><div class="rm-title">ファイルアップロードで突合</div><div class="rm-desc">専用URLにファイルを投げるだけ。あらゆるデータの突合に対応</div></div></div>
+<div class="rm next"><div class="rm-badge">NEXT</div><div><div class="rm-phase">Phase 2</div><div class="rm-title">会計ソフトから自動取得</div><div class="rm-desc">freee・MF・弥生と連携して入出金明細と請求書を自動取得。突合まで自動化</div></div></div>
+<div class="rm plan"><div class="rm-badge">PLAN</div><div><div class="rm-phase">Phase 3</div><div class="rm-title">突合→記載→通知まで完全自動化</div><div class="rm-desc">突合結果を会計ソフトに自動記載。差異があればSlack・チャットワークに即時通知</div></div></div>
+</div></section>
+
+<section class="s s-dark" style="padding-top:0"><div class="si cta"><h2>突合作業を、もっとスマートに。</h2><p>ファイルアップロード型も会計ソフト連携型も、<br/>お客様の環境に合わせて構築します。</p><a href="https://www.portament.jp/contact" target="_blank" class="cta-btn">お問い合わせ →</a></div></section>
+
+<footer>© 2026 PORTAMENT Inc. × NewCrews</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+function switchMode(i){document.querySelectorAll('.mode-btn').forEach((b,j)=>b.classList.toggle('active',j%2===i));document.querySelectorAll('.mode-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('#mp'+i+',#sp'+i).forEach(p=>p.classList.add('active'))}
+let c0=0,c1=0;
+setInterval(()=>{c0=(c0+1)%3;document.querySelectorAll('#steps0 .step').forEach((e,i)=>e.classList.toggle('active',i===c0))},2500);
+setInterval(()=>{c1=(c1+1)%4;document.querySelectorAll('#steps1 .step').forEach((e,i)=>e.classList.toggle('active',i===c1))},2500);
+function switchUC(i){document.querySelectorAll('.uc-tab').forEach((t,j)=>t.classList.toggle('active',j===i));document.querySelectorAll('.uc-panel').forEach((p,j)=>p.classList.toggle('active',j===i))}
+function switchDemo(i){document.querySelectorAll('.demo-tab').forEach((t,j)=>t.classList.toggle('active',j===i));document.querySelectorAll('.demo-pane').forEach((p,j)=>p.classList.toggle('active',j===i))}
+
+var sA=[{name:"株式会社ABC商事",amount:1320000},{name:"有限会社DEF商事",amount:264000},{name:"合同会社GHI",amount:880000},{name:"株式会社JKL工業",amount:550000},{name:"NPO法人MNO",amount:176000},{name:"株式会社PQR",amount:440000},{name:"有限会社STU設計",amount:2365000},{name:"株式会社VWX",amount:1320000}];
+var sB=[{name:"カ）エービーシーショウジ",amount:1320000},{name:"ユ）ディーイーエフショウジ",amount:263560},{name:"ド）ジーエイチアイ",amount:880000},{name:"トクヒ）エムエヌオー",amount:176000},{name:"カ）ピーキューアール",amount:437800},{name:"ユ）エスティーユーセッケイ",amount:2365000},{name:"カ）ブイダブリューエックス",amount:1320000}];
+var sMap={"カ）エービーシーショウジ":"株式会社ABC商事","ユ）ディーイーエフショウジ":"有限会社DEF商事","ド）ジーエイチアイ":"合同会社GHI","トクヒ）エムエヌオー":"NPO法人MNO","カ）ピーキューアール":"株式会社PQR","ユ）エスティーユーセッケイ":"有限会社STU設計","カ）ブイダブリューエックス":"株式会社VWX"};
+
+function reconcile(dA,dB,nm){
+  var r=[],uB=new Set();
+  dA.forEach(function(a){var matched=false;
+    for(var j=0;j<dB.length;j++){if(uB.has(j))continue;var b=dB[j];
+      var bN=nm?nm[b.name]||b.name:b.name;
+      var nM=a.name===bN||a.name===b.name||a.name.replace(/[\s　]/g,'')===(bN||b.name).replace(/[\s　]/g,'');
+      if(nM){uB.add(j);matched=true;
+        if(a.amount===b.amount){r.push({name:a.name,amtA:a.amount,amtB:b.amount,st:'match',d:'一致'})}
+        else{var df=a.amount-b.amount;var dt='¥'+Math.abs(df).toLocaleString()+' 差異';if(df>0&&df<=1000)dt='手数料 ¥'+df.toLocaleString();
+          r.push({name:a.name,amtA:a.amount,amtB:b.amount,st:'diff',d:dt})}break}}
+    if(!matched)r.push({name:a.name,amtA:a.amount,amtB:null,st:'unmatched',d:'未入金'})});
+  dB.forEach(function(b,j){if(!uB.has(j)){var bN=nm?nm[b.name]||b.name:b.name;r.push({name:bN,amtA:null,amtB:b.amount,st:'unmatched',d:'不明入金'})}});
+  return r}
+
+function render(res,tid){
+  var mc=0,dc=0,uc=0;res.forEach(function(r){if(r.st==='match')mc++;else if(r.st==='diff')dc++;else uc++});
+  var h='<div class="rh"><div class="rs"><div class="n" style="color:#0f172a">'+res.length+'</div><div class="l">対象件数</div></div>';
+  h+='<div class="rs"><div class="n" style="color:#16a34a">'+mc+'</div><div class="l">消込済</div></div>';
+  if(dc)h+='<div class="rs"><div class="n" style="color:#dc2626">'+dc+'</div><div class="l">差異あり</div></div>';
+  if(uc)h+='<div class="rs"><div class="n" style="color:#d97706">'+uc+'</div><div class="l">未消込</div></div>';
+  h+='</div>';
+  res.forEach(function(r,i){var amt=r.amtA?'¥'+r.amtA.toLocaleString():(r.amtB?'¥'+r.amtB.toLocaleString():'—');
+    h+='<div class="rr '+r.st+'"><div class="ri">'+(i+1)+'</div><div class="rn">'+r.name+'</div><div class="ra">'+amt+'</div><span class="rb '+r.st+'">'+(r.st==='match'?'✓ 消込':r.d)+'</span></div>'});
+  document.getElementById(tid).innerHTML=h}
+
+function runSample(){var b=document.getElementById('sampleBtn');b.textContent='突合中...';b.disabled=true;
+  setTimeout(function(){render(reconcile(sA,sB,sMap),'sR');b.textContent='サンプルデータで突合を実行';b.disabled=false},1000)}
+
+var fA=null,fB=null;
+function handleFile(idx,inp){var file=inp.files[0];if(!file)return;
+  var dz=document.getElementById('dz'+idx);dz.classList.add('has-file');
+  dz.innerHTML='<div class="drop-zone-file">✓ '+file.name+'</div><input type="file" id="f'+idx+'" accept=".xlsx,.xls,.csv" onchange="handleFile('+idx+',this)" style="display:none">';
+  var reader=new FileReader();reader.onload=function(e){
+    var data=new Uint8Array(e.target.result);var wb=XLSX.read(data,{type:'array'});
+    var ws=wb.Sheets[wb.SheetNames[0]];var json=XLSX.utils.sheet_to_json(ws,{header:1});var parsed=[];
+    var sr=json[0]&&typeof json[0][1]==='string'?1:0;
+    for(var i=sr;i<json.length;i++){var row=json[i];if(!row||!row[0])continue;var name=String(row[0]).trim();var amount=0;
+      for(var c=1;c<row.length;c++){var v=row[c];if(typeof v==='number'&&v>0){amount=v;break}if(typeof v==='string'){var n=Number(v.replace(/[,¥￥\s]/g,''));if(!isNaN(n)&&n>0){amount=n;break}}}
+      if(name&&amount>0)parsed.push({name:name,amount:amount})}
+    if(idx===1)fA=parsed;else fB=parsed;document.getElementById('uBtn').disabled=!(fA&&fB)};
+  reader.readAsArrayBuffer(file)}
+
+function runUpload(){if(!fA||!fB)return;var b=document.getElementById('uBtn');b.textContent='突合中...';b.disabled=true;
+  setTimeout(function(){render(reconcile(fA,fB,null),'uR');b.textContent='突合を実行';b.disabled=false},600)}
+
+['dz1','dz2'].forEach(function(id,i){var dz=document.getElementById(id);if(!dz)return;
+  dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag')});
+  dz.addEventListener('dragleave',function(){dz.classList.remove('drag')});
+  dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag');
+    var f=e.dataTransfer.files[0];if(f){var dt=new DataTransfer();dt.items.add(f);document.getElementById('f'+(i+1)).files=dt.files;handleFile(i+1,document.getElementById('f'+(i+1)))}})});
+</script>
+</body>
+</html>
